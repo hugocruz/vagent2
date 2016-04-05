@@ -301,8 +301,8 @@ test_it_no_content() {
 }
 
 test_it_no_content_fail() {
-	#FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
-	FOO=$(curl -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	# FOO=$(curl -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	echo "x$FOO"
