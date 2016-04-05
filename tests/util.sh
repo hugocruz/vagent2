@@ -98,8 +98,13 @@ init_password() {
 }
 
 init_misc() {
-	if [ ! -f "$(which lwp-request)" ]; then
-		echo "lwp-request not found in PATH, is libwww-perl installed?"
+	# if [ ! -f "$(which lwp-request)" ]; then
+	# 	echo "lwp-request not found in PATH, is libwww-perl installed?"
+	# 	exit 1
+	# fi
+
+	if [ ! -f "$(which curl)" ]; then
+		echo "curl not found in PATH, is curl installed?"
 		exit 1
 	fi
 
@@ -194,7 +199,7 @@ start_varnish() {
 		-a 127.0.0.1:0 \
 		-T 127.0.0.1:0 \
 		-s malloc,50m \
-		-S "$TMPDIR/secret" 
+		-S "$TMPDIR/secret"
 
 	FOO=""
 	for i in x x x x x x x x x x; do
@@ -234,7 +239,7 @@ start_agent() {
 	else
 		$ORIGPWD/../src/varnish-agent ${ARGS} >$AGENT_STDOUT
 	fi
-		
+
 	pidwait agent $AGENT_PORT
 }
 
@@ -259,15 +264,17 @@ test_strace()
 }
 
 test_it() {
-	FOO=$(lwp-request -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
-	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
+	#FOO=$(lwp-request -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
+	FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 -d "$3")
+	if [ "x$?" = "x0" ]; then pass; else fail "x$*: $FOO"; fi
 	inc
-	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
+	if [ "x$FOO" = "x$4" ]; then pass; else fail "y$*: $FOO"; fi
 	inc
 }
 
 test_it_code() {
-	FOO=$(lwp-request -Ssd -C ${PASS} -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
+	# FOO_OLD=$(lwp-request -Ssd -C ${PASS} -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
+	FOO=$(curl -u ${PASS} -L -I -s -o /dev/null -w "%{http_code}" -X $1 http://localhost:$AGENT_PORT/html --stderr - )
 	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	CODE=$(echo -e "$FOO" | grep -v "^$1" | head -n1 | cut -f1 -d' ')
@@ -275,8 +282,18 @@ test_it_code() {
 	inc
 }
 
+test_it_code_moved() {
+	FOO=$(curl -u ${PASS} -I -s -o /dev/null -w "%{http_code}"  -X $1 http://localhost:$AGENT_PORT/html --stderr - )
+       	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
+        inc
+        CODE=$(echo -e "$FOO" | grep -v "^$1" | head -n1 | cut -f1 -d' ')
+        if [ "x$CODE" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
+        inc
+}
+
 test_it_no_content() {
-	FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 </dev/null)
+	# FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 </dev/null)
+	FOO=$(curl -s -X $1  http://${PASS}@localhost:${AGENT_PORT}/$2 </dev/null)
 	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
@@ -284,15 +301,20 @@ test_it_no_content() {
 }
 
 test_it_no_content_fail() {
-	FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	#FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	FOO=$(curl -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
+	echo "x$FOO"
+	echo "$1"
+	echo "x$4"
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 }
 
 test_it_fail() {
 	FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
+	#FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 -d "$3")
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
