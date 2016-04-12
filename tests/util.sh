@@ -305,24 +305,29 @@ test_it_no_content_fail() {
 	# FOO=$(curl -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
-	echo "x$FOO"
-	echo "$1"
-	echo "x$4"
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 }
 
 test_it_fail() {
-	FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
-	#FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 -d "$3")
-	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
+	# FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
+	if [ -n "$3" ]; then
+		POSTSTRING=$3
+	else
+		POSTSTRING=''
+	fi
+	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING")
+	FOO=$(curl --fail -s -D -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING" )
+	if [ "x$?" != "x0" ]; then pass; else fail "x$*: $FOO"; fi
 	inc
-	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
+	if [ "x$FOO2" = "x$4" ]; then pass; else fail "y$*: $FOO2"; fi
 	inc
+	# echo "curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING""
 }
 
 test_it_first_line_fail() {
-	FOO=$( (lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3"; rc=$?) | head -1)
+	#FOO=$( (lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3"; rc=$?) | head -1)
+	FOO=$( (curl -s -D -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$3"; rc=$?) | head -1)
 	if [ "x$rc" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
@@ -362,8 +367,9 @@ test_it_long_file_fail() {
 }
 
 test_it_long_content_fail() {
-	FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
-	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
+	# FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
+	FOO=$(curl  -s -o /dev/null  -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$3")
+	if [ "x$?" = "x0" ]; then pass; else fail "x$*: $FOO"; fi
 	inc
 	if echo $FOO | grep -q "$4"; then fail "$*: $FOO"; else pass; fi
 	inc

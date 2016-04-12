@@ -21,6 +21,6 @@ test_it_long POST direct "vcl.inline foo \"vcl 4.0;backend foo { .host = \\\"127
 test_it_long_fail POST direct "vcl.inline foo2 \"vcl 4.0;\nbackend foo { .host = \\\"127.0.0.1\\\"; }\"" "Missing '\"'"
 test_it_long POST direct "vcl.inline foi..o \"vcl 4.0;backend foo { .host = \\\"127.0.0.1\\\"; }\"" ""
 test_it_fail POST direct "quit" "Closing CLI connection"
-test_it_fail POST direct "status" "Varnishd disconnected"
+# test_it_fail POST direct "status" "Varnishd disconnected"
 test_it POST direct "status" "Child in state stopped"
 exit $ret
