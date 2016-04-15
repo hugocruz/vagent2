@@ -265,10 +265,18 @@ test_strace()
 
 test_it() {
 	#FOO=$(lwp-request -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
-	FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 -d "$3")
-	if [ "x$?" = "x0" ]; then pass; else fail "x$*: $FOO"; fi
+	if [ -n "$3" ]; then
+		POSTSTRING="-d $3"
+	else
+		POSTSTRING=''
+	fi
+	FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
+	if [ "x$?" = "x0" ]; then pass; else fail "xtest_it$*: $FOO"; fi
 	inc
-	if [ "x$FOO" = "x$4" ]; then pass; else fail "y$*: $FOO"; fi
+	if [ "x$1" = "xDELETE" ]; then
+		FOO=$(curl -s --fail -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
+	fi
+	if [ "x$FOO" = "x$4" ]; then pass; else fail "ytest_it$*: $FOO"; fi
 	inc
 }
 
@@ -301,28 +309,28 @@ test_it_no_content() {
 }
 
 test_it_no_content_fail() {
-	FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
-	# FOO=$(curl -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	#FOO=$(lwp-request -f -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	FOO=$(curl  --fail -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
-	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
+	if [ "x$FOO2" = "x$4" ]; then pass; else fail "$*: $FOO2"; fi
 	inc
 }
 
 test_it_fail() {
 	# FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
 	if [ -n "$3" ]; then
-		POSTSTRING=$3
+		POSTSTRING="-d $3"
 	else
 		POSTSTRING=''
 	fi
-	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING")
-	FOO=$(curl --fail -s -D -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING" )
-	if [ "x$?" != "x0" ]; then pass; else fail "x$*: $FOO"; fi
+	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 "$POSTSTRING")
+	FOO=$(curl --fail -s -D -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 "$POSTSTRING" )
+	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
-	if [ "x$FOO2" = "x$4" ]; then pass; else fail "y$*: $FOO2"; fi
+	if [ "x$FOO2" = "x$4" ]; then pass; else fail "$*: $FOO2"; fi
 	inc
-	# echo "curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$POSTSTRING""
 }
 
 test_it_first_line_fail() {
@@ -335,41 +343,60 @@ test_it_first_line_fail() {
 }
 
 test_it_long() {
-	FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
-	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
+	#FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
+	if [ -n "$3" ]; then
+		POSTSTRING="-d $3"
+	else
+		POSTSTRING=''
+	fi
+	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 "$POSTSTRING")
+	FOO=$(echo -e "$3" |curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
+	if [ "x$?" = "x0" ]; then pass; else fail "xtest_it_long$*: $FOO"; fi
 	inc
-	if echo $FOO | grep -q "$4";then pass; else fail "$*: $FOO"; fi
+	echo "x$FOO"
+	echo "x$4"
+	if echo $FOO | grep -q "$4";then pass; else fail "ytest_it_long$*: $FOO"; fi
 	inc
 }
 
 test_it_long_fail() {
-	FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	# FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 )
+	if [ "x$1" = "xPUT" ]; then
+		FAILSTRING="--fail -s"
+	else
+		FAILSTRING='--fail -s -D'
+	fi
+	FOO=$(echo -e "$3" | curl $FAILSTRING -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 --stderr -)
 	if [ "x$?" != "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
-	if echo $FOO | grep -q "$4";then pass; else fail "$*: $FOO"; fi
+	FOO2=$(curl -s -D -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
+	if echo $FOO2 | grep -q "$4";then pass; else fail "$*: $FOO2"; fi
 	inc
 }
 
 test_it_long_file() {
 	FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <"$3")
+	#FOO=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -T "$3")
 	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	if echo $FOO | grep -q "$4";then pass; else fail "$*: $FOO"; fi
 	inc
 }
 
+
 test_it_long_file_fail() {
-	FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <"$3")
-	if [ "x$?" = "x1" ]; then pass; else fail "$*: $FOO"; fi
+	# FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <"$3")
+	FOO=$(curl --fail -IL -s  -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -T $3 --stderr -)
+	if [ "x$?" = "x55" ]; then pass; else fail "$*: $FOO"; fi #55 - Failed sending network data.(man curl)
 	inc
-	if echo $FOO | egrep -q "$4";then pass; else fail "$*: $FOO"; fi
+	if echo $FOO | egrep "$4";then pass; else fail "$*: $FOO"; fi
 	inc
 }
 
 test_it_long_content_fail() {
 	# FOO=$(lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2 <<<"$3")
 	FOO=$(curl  -s -o /dev/null  -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 -d "$3")
-	if [ "x$?" = "x0" ]; then pass; else fail "x$*: $FOO"; fi
+	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	if echo $FOO | grep -q "$4"; then fail "$*: $FOO"; else pass; fi
 	inc
