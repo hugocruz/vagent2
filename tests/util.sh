@@ -264,18 +264,18 @@ test_strace()
 }
 
 test_it() {
-	FOO=$(lwp-request -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
-	# if [ -n "$3" ]; then
-	# 	POSTSTRING="-d $3"
-	# else
-	# 	POSTSTRING=''
-	# fi
-	# FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
+	#FOO=$(lwp-request -m $1 http://${PASS}@localhost:$AGENT_PORT/$2 <<<"$3")
+	if [ -n "$3" ]; then
+		POSTSTRING="-d $3"
+	else
+		POSTSTRING=''
+	fi
+	FOO=$(curl -s -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
 	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
-	# if [ "x$1" = "xDELETE" ]; then
-	# 	FOO=$(curl -s --fail -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
-	# fi
+	if [ "x$1" = "xDELETE" ]; then
+		FOO=$(curl -s --fail -X $1 http://${PASS}@localhost:$AGENT_PORT/$2 $POSTSTRING)
+	fi
 	if [ "x$FOO" = "x$4" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 }
@@ -343,14 +343,14 @@ test_it_first_line_fail() {
 }
 
 test_it_long() {
-	FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
-	# if [ -n "$3" ]; then
-	# 	POSTSTRING="-d $3"
-	# else
-	# 	POSTSTRING=''
-	# fi
-	# FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 "$POSTSTRING")
-	# FOO=$(echo -e "$3" |curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
+	#FOO=$(echo -e "$3" | lwp-request -m $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
+	if [ -n "$3" ]; then
+		POSTSTRING="-d $3"
+	else
+		POSTSTRING=''
+	fi
+	FOO2=$(curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2 "$POSTSTRING")
+	FOO=$(echo -e "$3" |curl -s -X $1 http://${PASS}@localhost:${AGENT_PORT}/$2)
 	if [ "x$?" = "x0" ]; then pass; else fail "$*: $FOO"; fi
 	inc
 	# echo "x$FOO"
